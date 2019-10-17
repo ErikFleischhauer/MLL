@@ -1,0 +1,14 @@
+
+The following conda and pip packages need to be installed in your environment for this session.
+(More information about jdc on https://alexhagen.github.io/jdc/)
+
+```
+conda install numpy
+conda install matplotlib
+conda install cPickle
+conda install gzip
+conda install scikit-learn
+pip install jdc
+conda install -c conda-forge ipdb
+```
+
