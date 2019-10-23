@@ -13,7 +13,7 @@ After having worked through the preparatory materials, you will then practice th
 1. Install [docker](https://www.docker.com/)
 2. Pull the docker container accompanying the Machine Learning Laboratory. You can do this using `docker pull lfbbot/mll` inside a terminal.
 3. Start the docker container using `docker run -p 8000:8000 -d -v $YOUR_DIRECTORY:/home --name $NAME --rm lfbbot/mll`. `$YOUR_DIRECTORY` Is the folder on your local filesystem you want to save your progress to. This git repository will be cloned there. `$NAME` will be used to shut down your docker container later on.
-4. A jupyterhub will be available at `localhost:8000`. Your progress will be saved in `$YOUR_DIRECTORY`
+4. A jupyterhub will be available at `localhost:8000`. Login using `praktikum` for both username and password. Your progress will be saved in `$YOUR_DIRECTORY`
 5. After you are done, you can stop your docker container using `docker kill $NAME`.
 
 * Note: The above has been tested using Ubuntu 18.04 only, though docker is also available on Windows and MacOS
