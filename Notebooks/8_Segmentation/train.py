@@ -7,7 +7,6 @@ import torchvision.transforms as standard_transforms
 import torchvision.utils as vutils
 from torchvision.datasets import VOCSegmentation
 from torch import optim
-from torch.autograd import Variable
 from torch.backends import cudnn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
@@ -18,6 +17,7 @@ import transforms as extended_transforms
 from misc import check_mkdir, evaluate, AverageMeter, CrossEntropyLoss2d, colorize_mask
 from torch.nn.modules.loss import CrossEntropyLoss
 cudnn.benchmark = True
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 ckpt_path = '../../ckpt'
 exp_name = 'voc-fcn8s'
@@ -37,7 +37,7 @@ args = {
 def main(train_args, model):
     print(train_args)
 
-    net = model.cuda()
+    net = model.to(device)
 
     if len(train_args['snapshot']) == 0:
         curr_epoch = 1
@@ -85,8 +85,7 @@ def main(train_args, model):
     val_set = VOCSegmentation(root='./', image_set='val', transform=input_transform, target_transform=train_transform)
     val_loader = DataLoader(val_set, batch_size=1, num_workers=4, shuffle=False)
 
-    #criterion = CrossEntropyLoss().cuda()#2d(size_average=False, ignore_index=voc.ignore_label).cuda()
-    criterion = CrossEntropyLoss(size_average=False, ignore_index=255).cuda()
+    criterion = CrossEntropyLoss(ignore_index=255, reduction='mean').to(device)
 
     optimizer = optim.SGD([
         {'params': [param for name, param in net.named_parameters() if name[-4:] == 'bias'],
@@ -126,8 +125,8 @@ def train(train_loader, net, criterion, optimizer, epoch, train_args):
         inputs, labels = data
         assert inputs.size()[2:] == labels.size()[1:], "inputs are " + str(inputs.size()[2:]) + "output is" + str(labels.size()[1:])
         N = inputs.size(0)
-        inputs = Variable(inputs).cuda()
-        labels = Variable(labels).cuda()
+        inputs = inputs.to(device)
+        labels = labels.to(device)
 
         optimizer.zero_grad()
         outputs = net(inputs)
@@ -156,8 +155,8 @@ def validate(val_loader, net, criterion, optimizer, epoch, train_args, restore, 
     for vi, data in enumerate(val_loader):
         inputs, gts = data
         N = inputs.size(0)
-        inputs = Variable(inputs).cuda()
-        gts = Variable(gts).cuda()
+        inputs = inputs.to(device)
+        gts = gts.to(device)
         
         with torch.no_grad():
             outputs = net(inputs)
@@ -193,22 +192,22 @@ def validate(val_loader, net, criterion, optimizer, epoch, train_args, restore, 
             #to_save_dir = os.path.join(ckpt_path, exp_name, str(epoch))
             #check_mkdir(to_save_dir)
 
-        val_visual = []
-        for idx, data in enumerate(zip(inputs_all, gts_all, predictions_all)):
-            if data[0] is None:
-                continue
-            input_pil = restore(data[0])
-            gt_pil = colorize_mask(data[1])
-            predictions_pil = colorize_mask(data[2])
-            if train_args['val_save_to_img_file']:
-                pass
-                #input_pil.save(os.path.join(to_save_dir, '%d_input.png' % idx))
-                #predictions_pil.save(os.path.join(to_save_dir, '%d_prediction.png' % idx))
-                #gt_pil.save(os.path.join(to_save_dir, '%d_gt.png' % idx))
-            val_visual.extend([visualize(input_pil.convert('RGB')), visualize(gt_pil.convert('RGB')),
-                               visualize(predictions_pil.convert('RGB'))])
-        val_visual = torch.stack(val_visual, 0)
-        val_visual = vutils.make_grid(val_visual, nrow=3, padding=5)
+    val_visual = []
+    for idx, data in enumerate(zip(inputs_all, gts_all, predictions_all)):
+        if data[0] is None:
+            continue
+        input_pil = restore(data[0])
+        gt_pil = colorize_mask(data[1])
+        predictions_pil = colorize_mask(data[2])
+        if train_args['val_save_to_img_file']:
+            pass
+            #input_pil.save(os.path.join(to_save_dir, '%d_input.png' % idx))
+            #predictions_pil.save(os.path.join(to_save_dir, '%d_prediction.png' % idx))
+            #gt_pil.save(os.path.join(to_save_dir, '%d_gt.png' % idx))
+        val_visual.extend([visualize(input_pil.convert('RGB')), visualize(gt_pil.convert('RGB')),
+                            visualize(predictions_pil.convert('RGB'))])
+    val_visual = torch.stack(val_visual, 0)
+    val_visual = vutils.make_grid(val_visual, nrow=3, padding=5)
 
     print('--------------------------------------------------------------------')
     print('[epoch %d], [val loss %.5f], [acc %.5f], [acc_cls %.5f], [mean_iu %.5f], [fwavacc %.5f]' % (
