@@ -1,5 +1,4 @@
 from six.moves import urllib
-from sklearn.datasets import fetch_mldata
 from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 
